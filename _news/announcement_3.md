@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-I began a visiting research position at [Inpehany](https://www.inephany.com/)! :sparkles:
+I began a visiting research position at [Inephany](https://www.inephany.com/)! :sparkles:
