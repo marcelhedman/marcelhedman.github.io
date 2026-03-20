@@ -2,7 +2,7 @@
 layout: about
 title: about
 permalink: /
-subtitle: <a href='https://www.stats.ox.ac.uk/people/marcel-hedman'>Department of Statistics, University of Oxford</a>.  <em>That's the motto, YOLO. </em>
+subtitle: <a href='https://www.stats.ox.ac.uk/people/marcel-hedman'>Department of Statistics, University of Oxford</a>. 
 
 profile:
   align: right
