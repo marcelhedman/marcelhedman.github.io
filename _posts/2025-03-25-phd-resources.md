@@ -24,6 +24,6 @@ A collection of resources I've found useful during my ML PhD. If you're starting
 
 - **[Probabilistic Machine Learning: Advanced Topics](https://probml.github.io/pml-book/book2.html)** — Comprehensive reference on advanced probabilistic ML.
 
-- **[Bayesian Computation Book](https://bayesiancomputationbook.com/welcome.html)** — A good overview of Bayesian methods and computation.
+- **[Bayesian Computation Book](https://bayesiancomputationbook.com/welcome.html)** — A good overview of Bayesian methods and computation (Online book).
 
-- **[Causal Inference for the Brave and True](https://matheusfacure.github.io/python-causality-handbook/landing-page.html)** — Webook and hands-on Python-based overview to causal inference.
+- **[Causal Inference for the Brave and True](https://matheusfacure.github.io/python-causality-handbook/landing-page.html)** — Online book and hands-on Python-based overview to causal inference.
