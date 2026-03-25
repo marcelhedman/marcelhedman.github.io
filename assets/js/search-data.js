@@ -23,9 +23,9 @@ ninja.data = [{
           handler: () => {
             window.location.href = "/publications/";
           },
-        },{id: "post-useful-phd-resources",
+        },{id: "post-useful-resources-for-an-ml-phd",
         
-          title: "Useful PhD Resources",
+          title: "Useful resources for an ML PhD",
         
         description: "A list of links with useful resources for an ML PhD",
         section: "Posts",
