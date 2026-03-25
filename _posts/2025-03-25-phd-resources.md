@@ -1,8 +1,8 @@
 ---
 layout: post
-title: Useful resources for an ML PhD
+title: Useful resources for ML PhD students
 date: 2025-03-24 15:09:00
-description: A list of links with useful resources for an ML PhD
+description: A collection of helpful links and references
 tags: advice
 categories: Resources
 featured: true
