@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-I am presenting FairBED at [Manchester Workshop on Bayesian Experimental Design 2026](https://sites.google.com/view/bayesianexperimentaldesign/schedule)!
+I am presenting FairBED at [Manchester Workshop on Bayesian Experimental Design 2026](https://sites.google.com/view/bayesianexperimentaldesign)!
