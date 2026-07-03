@@ -228,7 +228,7 @@ $$
 where $b$ is an optional $\phi$-independent baseline. This is precisely the DAD estimator, and it is nothing more than the general two-term identity specialized to a deterministic policy: the first term is the ever-present score-function term, and the second is the direct term $\nabla_\phi R_\phi$, alive only because the deterministic design map lets $\phi$ flow into the likelihood-ratio reward. Swap in a stochastic, non-reparameterized policy and that second term vanishes, collapsing this back to the plain REINFORCE form of the previous section.
 
 
-That direct term is exactly a deterministic policy gradient. Recall the RL algorithm DDPG's (Deep Deterministic Policy Gradient) actor update,
+The above recovered the form from the DAD paper via the general REINFORCE form. However, it can equivalently be seen directly from recalling the RL algorithm DDPG's (Deep Deterministic Policy Gradient) actor update:
  
 
 
