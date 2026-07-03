@@ -2,7 +2,7 @@
 layout: post
 title: REINFORCE, Bayesian Experimental Design, and What Gradient We Are Really Taking
 date: 2026-07-02 15:09:00
-description: Exploring the difference between reinforcement learning applied to Bayesian experimental design and REINFORCE-style gradients used inside standard Bayesian experimental design objectives
+description: Exploring reinforcement learning applied to Bayesian experimental design and REINFORCE-style gradients pre-existing within Bayesian experimental design objectives
 tags: machine-learning reinforcement-learning bayesian-experimental-design gradients information-gain
 categories: Theory
 featured: true
@@ -10,13 +10,14 @@ featured: true
 
 Bayesian experimental design and reinforcement learning both address sequential decision-making under uncertainty, and the connection between them is natural. In sequential Bayesian experimental design, we choose a design, observe an outcome, update our beliefs, and choose the next design, a loop that looks very much like the kind of sequential decision problem reinforcement learning is built for.
 
-Several papers make this connection explicit. Blau et al. (2022) formulate sequential Bayesian experimental design as a hidden-parameter MDP and use deep reinforcement learning to learn design policies, motivated partly by the fact that RL can handle settings where the design space is discrete, the probabilistic model is a black box, or the likelihood is non-differentiable and implicit. DAD (Foster et al. (2021)), and later variants such as iDAD (Ivanova et al. (2021)) and Step-DAD (Hedman et al. (2025)), also train amortized design policies, but instead do so by directly differentiating information-theoretic objectives such as contrastive lower bounds on expected information gain.
+Several papers make this connection explicit. Blau et al. (2022) formulate sequential Bayesian experimental design as a hidden-parameter MDP and use deep reinforcement learning to learn design policies, motivated partly by the fact that RL can handle settings where the design space is discrete, the probabilistic model is a black box, or the likelihood is non-differentiable and implicit. DAD (Foster et al. (2021)), and later variants such as iDAD (Ivanova et al. (2021)) and Step-DAD (Hedman et al. (2025)), also train amortized design policies, and reach for REINFORCE-style score-function estimators to optimize information-theoretic objectives such as contrastive lower bounds on expected information gain.
 
-So it is tempting to say: “these are all just policy-gradient methods for expected information gain.”
+Despite the clear similarities between the fields, when reading the DAD paper, its gradient estimator for the sPCE objective may at first glance look like a distinct, more complicated object than the plain REINFORCE estimator. Specifically, carrying an extra term that has no counterpart in the familiar REINFORCE estimators from RL. It is easy to come away thinking DAD is optimizing something structurally different.
+ 
+It is not. That estimator is simply the *deterministic-policy* form of the exact same REINFORCE gradient. Swap the deterministic design network for a stochastic, non-reparameterized policy and the extra term vanishes, leaving precisely the standard REINFORCE estimator we are all familiar with. The RL formulation and the DAD-style estimator are not taking different gradients of the objective; they are taking the *same* gradient of the *same* contrastive sPCE objective. The only thing that differs is which terms of that gradient survive, and that is governed entirely by one choice: whether the design policy is deterministic or stochastic.
+ 
+Everything else in this post is unpacking that one fact.
 
-But that hides an important distinction. The RL formulation and the DAD-style score-function estimator target polcies that perform well under the sequential PCE lower bound, but ultimately are taking distinct gradients that answer different conceptual questions.
-
-The difference comes down to whether the reward is treated as an external scalar, or as a differentiable function of the policy parameters.
 
 ---
 
@@ -35,7 +36,7 @@ $$
 
 where $h$ is a sampled history or trajectory, $p_\phi(h)$ is the distribution over histories induced by the current design policy, and $R_\phi(h)$ is the reward-like quantity assigned to that history.
 
-I have written $R_\phi(h)$, rather than just $R(h)$, because in Bayesian experimental design the reward is often not an external scalar. It may be a likelihood ratio, a contrastive information bound, or some other differentiable function of the design.
+I have written $R_\phi(h)$, rather than just $R(h)$, to allow for the possibility that the reward itself depends on the policy parameters. This happens either because the reward takes $\phi$ as a direct input (rare), or because $\phi$ enters through the designs the reward is evaluated on (via deterministic policies). Keeping the subscript lets us derive the gradient once, in full generality, and then see later exactly when that dependence is present and when it drops away.
 
 Writing the expectation as an integral,
 
@@ -105,68 +106,44 @@ R_\phi(h)\nabla_\phi\log p_\phi(h)
 }
 $$
 
-This general form contains two terms, and they differ in what they hold fixed.
 
-The direct term,
-
-$$
-\nabla_\phi R_\phi(h),
-$$
-
-holds the sampled outcomes fixed but lets the designs vary with $\phi$. It asks:
-
-> If we regenerate the designs in this history using a slightly different policy, but the outcomes are fixed, how does the reward change?
-
-This is a pathwise, gradient: it flows through the explicit $\phi$-dependence inside $R_\phi$.
+This general form contains two terms, but they do not both appear in every case. Which of them is present is decided by how the designs depend on $\phi$, and that is a property of the design policy.
 
 The score-function term,
-
+ 
 $$
 R_\phi(h)\nabla_\phi\log p_\phi(h),
 $$
-
-holds the entire trajectory fixed, both the designs and the outcomes. It asks:
-
+ 
+is always present. It comes from the fact that $\phi$ shapes the distribution over trajectories $p_\phi(h)$. It asks:
+ 
 > Leaving this exact history fixed, designs and outcomes alike, should the policy make a trajectory like this more or less likely to occur in the first place?
 
-This distinction matters in Bayesian experimental design because a design choice affects two separate things: how informative a given observation turns out to be, and how likely that observation was to occur under the sampled parameter. The direct term captures the first effect, adjusting the designs so that the outcome we actually got becomes more informative. The score-function term captures the second, reweighting entire trajectories so that those with high information reward become more probable, and those with low information reward become less probable, without changing how informative any single trajectory is judged to be.
+This is the only route through which a *stochastic, non-reparameterized* policy can be trained. When the designs are sampled from the policy, they are not differentiable functions of $\phi$; the only place $\phi$ appears in a realized trajectory is in the probability the policy assigned to the actions it took, i.e. in $\log p_\phi(h)$. So this term reweights whole trajectories, pushing probability toward those with high reward and away from those with low reward, without ever differentiating the reward itself.
 
-The two terms split along a line of differentiability. The policy's designs are a differentiable function of $\phi$, so the direct term can differentiate through them. The sampled outcomes are not, because we are assuming a likelihood that cannot be reparameterized, so there is no differentiable path from $\phi$ through the outcome. What remains differentiable is the log-probability the model assigns to the outcome that occurred, and this is what the score-function term uses.
-
-For example, if $y_t$ is discrete, there is no differentiable path from $\phi$ through the realized sample $y_t$. But
-
+The direct term,
+ 
 $$
-\log p_\phi(y_t)
+\nabla_\phi R_\phi(h),
 $$
+ 
+is present only when $\phi$ enters the reward directly as an input or pathwise via the design policy. Specifically, this occurs when the designs are a differentiable function of $\phi$, which is exactly the *deterministic* (or reparameterized) policy case. It asks:
 
-is differentiable. The score-function term works with this log-probability rather than with $y_t$ itself, which is how it shifts probability mass toward better trajectories without differentiating through the outcome.
+> Holding the outcomes fixed, if we nudge the designs the policy would produce, how does the reward change?
 
----
+This is a pathwise gradient. It does not reweight trajectories; it improves the reward of the trajectory in front of us by adjusting the designs.
+ 
 
+Formally, the direct term is nonzero only when $\phi$ has a differentiable path into the design $\xi$. For a deterministic policy $\xi_t = \pi_\phi(h_{t-1})$, the design is an explicit differentiable function of $\phi$, so $\nabla_\phi R_\phi \neq 0$. For a stochastic policy whose action is a non-reparameterized sample, that path is severed and $\nabla_\phi R_\phi = 0$. The sampled outcomes, by contrast, are non-differentiable in *either* case, since we are assuming a likelihood that cannot be reparameterized; what remains differentiable is the log-probability the model assigns to the outcome that occurred, and that is what the ever-present score-function term uses.
+ 
+
+ ---
+ 
 ## Why Standard RL Looks Simpler
-
-In most reinforcement learning presentations, the reward is assumed to come from the environment. The policy parameters affect which trajectories are sampled, but the reward assigned to a realized trajectory is treated as fixed once the trajectory has occurred.
-
-That is, the objective is written as
-
-$$
-J_{\mathrm{RL}}(\phi)
-=
-\mathbb E_{h\sim p_\phi(h)}
-\left[
-R(h)
-\right],
-$$
-
-where $R$ has no direct dependence on $\phi$.
-
-Then
-
-$$
-\nabla_\phi R(h)=0,
-$$
-
-and the general identity reduces to
+ 
+Most reinforcement learning settings assume a stochastic policy with non-reparameterized actions. That single modelling choice is why the estimator seen most often in the literature is the plain REINFORCE score-function estimator with no direct term.
+ 
+We can read this straight off the general identity. With non-reparameterized samples there is no differentiable path from $\phi$ into the actions, so $\nabla_\phi R_\phi = 0$ and only the score-function term survives:
 
 $$
 \boxed{
@@ -179,9 +156,7 @@ R(h)\nabla_\phi\log p_\phi(h)
 }
 $$
 
-This is the familiar REINFORCE estimator.
-
-A baseline can be subtracted because
+This is the familiar REINFORCE estimator. A baseline $b$ can be subtracted without introducing bias, since
 
 $$
 \mathbb E_{h\sim p_\phi}
@@ -190,64 +165,34 @@ b\nabla_\phi\log p_\phi(h)
 \right]
 =
 b
-\int p_\phi(h)\nabla_\phi\log p_\phi(h)\,dh
-=
-b
 \int \nabla_\phi p_\phi(h)\,dh
 =
 b\nabla_\phi 1
 =
-0.
+0,
 $$
 
-This holds only when $b$ does not depend on $\phi$. The baseline may depend on quantities observed before the action, such as the state or the history prefix, but if it depends on $\phi$ then $\nabla_\phi$ acts on it too and the term no longer vanishes. Subject to that, one usually writes
+provided $b$ does not depend on $\phi$ (it may depend on the state or history prefix), giving the usual
 
 $$
-\boxed{
 \nabla_\phi J_{\mathrm{RL}}(\phi)
 =
 \mathbb E_{h\sim p_\phi}
 \left[
 (R(h)-b)\nabla_\phi\log p_\phi(h)
 \right].
-}
 $$
 
-The above is a special case of the general identity under the assumption that the reward does not directly depend on the policy parameters.
+
 
 ---
+ 
+## DAD: A Deterministic Policy, So Both Terms Survive
+ 
+In sequential Bayesian experimental design the policy chooses designs, $\xi_t = \pi_\phi(h_{t-1})$, and the model produces observations $y_t \sim p(y_t\mid \theta,\xi_t)$, building up a history $h_T = \{(\xi_1,y_1),\dots,(\xi_T,y_T)\}$.
+ 
+DAD optimizes a contrastive lower bound on expected information gain. Given latent samples $\theta_0,\dots,\theta_L$ and writing $p_\ell(h_T) = p(h_T\mid \theta_\ell,\pi_\phi)$, the sPCE reward-like quantity is
 
-## The Bayesian Experimental Design Setting
-
-In sequential Bayesian experimental design, the policy chooses designs,
-
-$$
-\xi_t = \pi_\phi(h_{t-1}),
-$$
-
-then the model produces observations,
-
-$$
-y_t \sim p(y_t\mid \theta,\xi_t).
-$$
-
-The history is
-
-$$
-h_T
-=
-\{(\xi_1,y_1),\dots,(\xi_T,y_T)\}.
-$$
-
-DAD optimizes a contrastive lower bound on expected information gain. Given latent samples $\theta_0,\dots,\theta_L$, define
-
-$$
-p_\ell(h_T)
-=
-p(h_T\mid \theta_\ell,\pi_\phi).
-$$
-
-The sPCE reward-like quantity is
 
 $$
 R_\phi(h_T,\theta_{0:L})
@@ -257,110 +202,12 @@ R_\phi(h_T,\theta_{0:L})
 p_0(h_T)
 }{
 \sum_{\ell=0}^L p_\ell(h_T)
-}.
+},
 $$
+ 
+and the objective is $L_T(\phi) = \mathbb E_{\theta_{0:L}}\,\mathbb E_{h_T\sim p_0}\left[R_\phi\right]$.
 
-The objective is
-
-$$
-L_T(\phi)
-=
-\mathbb E_{\theta_{0:L}}
-\mathbb E_{h_T\sim p_0}
-\left[
-R_\phi(h_T,\theta_{0:L})
-\right].
-$$
-
-This looks like an RL objective, but the reward is not just an external scalar. It is a likelihood-ratio expression that depends on the policy through the designs inside the likelihood terms.
-
-Applying the general identity gives
-
-$$
-\nabla_\phi L_T
-=
-\mathbb E
-\left[
-R_\phi
-\nabla_\phi\log p_0(h_T)
-+
-\nabla_\phi R_\phi
-\right].
-$$
-
-Now expand the direct reward gradient:
-
-$$
-\nabla_\phi R_\phi
-=
-\nabla_\phi\log p_0(h_T)
--
-\nabla_\phi
-\log
-\sum_{\ell=0}^L p_\ell(h_T).
-$$
-
-The first term has zero expectation under $h_T\sim p_0$:
-
-$$
-\mathbb E_{h_T\sim p_0}
-\left[
-\nabla_\phi\log p_0(h_T)
-\right]
-=
-0.
-$$
-
-Therefore, in expectation,
-
-$$
-\nabla_\phi L_T
-=
-\mathbb E
-\left[
-R_\phi
-\nabla_\phi\log p_0(h_T)
--
-\nabla_\phi
-\log
-\sum_{\ell=0}^L p_\ell(h_T)
-\right].
-$$
-
-Substituting the definition of $R_\phi$,
-
-$$
-\boxed{
-\nabla_\phi L_T
-=
-\mathbb E
-\left[
-\left(
-\log
-\frac{
-p(h_T\mid\theta_0,\pi_\phi)
-}{
-\sum_{\ell=0}^L p(h_T\mid\theta_\ell,\pi_\phi)
-}
-\right)
-\nabla_\phi
-\log p(h_T\mid\theta_0,\pi_\phi)
--
-\nabla_\phi
-\log
-\sum_{\ell=0}^L
-p(h_T\mid\theta_\ell,\pi_\phi)
-\right].
-}
-$$
-
-With a baseline $b$, the first term can be replaced by
-
-$$
-(R_\phi-b)\nabla_\phi\log p_0(h_T),
-$$
-
-giving
+The decisive fact is that DAD uses a *deterministic* design network: $\xi_t = \pi_\phi(h_{t-1})$ is a differentiable map, so $\phi$ enters $R_\phi$ through the designs inside the likelihood terms. This is exactly the case from the general section where both terms are live. Applying the general identity, and using that $\mathbb E_{h_T\sim p_0}[\nabla_\phi\log p_0(h_T)] = 0$ to drop the numerator's score contribution from the direct term, gives
 
 $$
 \boxed{
@@ -374,20 +221,115 @@ $$
 \nabla_\phi
 \log
 \sum_{\ell=0}^L p_\ell(h_T)
-\right].
+\right],
 }
 $$
 
-This is the DAD-style score-function estimator for the sPCE objective. It contains both the RL-like probability-shifting term and a direct likelihood-gradient term.
+where $b$ is an optional $\phi$-independent baseline. This is precisely the DAD estimator, and it is nothing more than the general two-term identity specialized to a deterministic policy: the first term is the ever-present score-function term, and the second is the direct term $\nabla_\phi R_\phi$, alive only because the deterministic design map lets $\phi$ flow into the likelihood-ratio reward. Swap in a stochastic, non-reparameterized policy and that second term vanishes, collapsing this back to the plain REINFORCE form of the previous section.
+
+
+That direct term is exactly a deterministic policy gradient. Recall the RL algorithm DDPG's (Deep Deterministic Policy Gradient) actor update,
+ 
+
+
+$$
+\nabla_\phi J
+=
+\mathbb E_{s}
+\left[
+\nabla_\xi Q(\xi)\big|_{\xi=\pi_\phi(s)}\,
+\nabla_\phi \pi_\phi(s)
+\right],
+$$
+ 
+and note that here $Q(\xi)$ is itself an expectation of the sPCE log-ratio reward,
+ 
+$$
+Q(\xi)
+=
+\mathbb E_{\theta_{0:L},\,y\sim p(y\mid\theta_0,\xi)}
+\left[
+\log
+\frac{
+p(y\mid\theta_0,\xi)
+}{
+\sum_{\ell=0}^L p(y\mid\theta_\ell,\xi)
+}
+\right].
+$$
+ 
+So when we expand $\nabla_\xi Q(\xi)$, the design enters both inside the log-ratio and inside the sampling density $p(y\mid\theta_0,\xi)$ the expectation is taken over, and the product rule gives two pieces,
+ 
+$$
+\nabla_\xi Q(\xi)
+=
+\mathbb E_{\theta_{0:L},\,y}
+\left[
+\log
+\frac{
+p(y\mid\theta_0,\xi)
+}{
+\sum_{\ell=0}^L p(y\mid\theta_\ell,\xi)
+}
+\,\nabla_\xi\log p(y\mid\theta_0,\xi)
++
+\nabla_\xi
+\log
+\frac{
+p(y\mid\theta_0,\xi)
+}{
+\sum_{\ell=0}^L p(y\mid\theta_\ell,\xi)
+}
+\right].
+$$
+ 
+Plugging this into the deterministic-policy-gradient form, with $\xi_\phi = \pi_\phi(s)$,
+ 
+$$
+\boxed{
+\nabla_\phi J
+=
+\mathbb E_{\theta_{0:L},\,y}
+\left[
+\log
+\frac{
+p(y\mid\theta_0,\xi_\phi)
+}{
+\sum_{\ell=0}^L p(y\mid\theta_\ell,\xi_\phi)
+}
+\,\nabla_\xi\log p(y\mid\theta_0,\xi_\phi)\,\nabla_\phi\xi_\phi
++
+\nabla_\xi
+\log
+\frac{
+p(y\mid\theta_0,\xi_\phi)
+}{
+\sum_{\ell=0}^L p(y\mid\theta_\ell,\xi_\phi)
+}
+\,\nabla_\phi\xi_\phi
+\right].
+}
+$$
+ 
+This is the two-term DAD form. The two pieces are the same score-function and direct terms as before, now visible as a single consequence of differentiating a design-dependent expectation. A stochastic, non-reparameterized policy would sever the $\nabla_\phi\xi_\phi$ path and leave only the score-function estimator of the previous section.
+
+
+
+
+
+
+
+
+
+
+
 
 ---
-
+ 
 ## RL Applied to BED: The Blau et al. (2022) Perspective
-
-Blau et al. (2022) take a different route. Instead of directly differentiating the sPCE expression through a deterministic design network, they construct a hidden-parameter MDP whose expected return is equal to a sequential experimental design objective based on sPCE. They then solve this MDP with modern deep RL methods.
-
-Abstractly, their RL objective is
-
+ 
+Blau et al. (2022) target the same sPCE objective, but unlike DAD, work with stochastic policies. They construct a hidden-parameter MDP whose expected return equals the sPCE objective, then solve it with standard deep RL:
+ 
 $$
 J_{\mathrm{RL}}(\pi)
 =
@@ -398,82 +340,47 @@ J_{\mathrm{RL}}(\pi)
 =
 \mathrm{sPCE}(\pi,L,T).
 $$
-
-The reward is constructed so that the expected return corresponds to the same contrastive design objective. But once this is cast as an RL problem, the policy-gradient update is of the standard form
-
+ 
+Here, the policy is stochastic and its designs are non-reparameterized samples. That is precisely the case from the general section where the direct term is zero, so the update is the more familiar policy gradient with only the score-function term,
+ 
 $$
-\nabla_\phi
-\mathbb E_{\tau\sim p_\phi(\tau)}
+\nabla_\phi J_{\mathrm{RL}}
+=
+\mathbb E_{h\sim p_\phi}
 \left[
-\sum_t r_t
+R(h)\,\nabla_\phi\log p_\phi(h)
 \right],
 $$
-
-estimated using terms like
-
-$$
-\mathbb E
-\left[
-Q^\pi(s_t,a_t)
-\nabla_\phi\log\pi_\phi(a_t\mid s_t)
-\right].
-$$
-
-Conceptually, this asks:
-
-> Which sampled actions or designs led to high long-run sPCE reward, and should the policy make those actions more likely?
-
-That is the standard RL question. The estimator upweights sampled design trajectories that produced high contrastive information reward and downweights those that did not.
-
-But it does not ask the DAD pathwise question:
-
-> For this same sampled outcome path, how would a small differentiable change in the design alter the likelihood-ratio reward?
-
-That is the key distinction. In the pure RL setup, the policy is trained to place more probability mass on trajectories that lead to high sPCE return. In DAD, when the model is differentiable through the design, the estimator can also exploit how changing the design infinitesimally changes the likelihood-ratio reward itself.
-
-So the difference is not merely “BED versus RL.” Both can target an sPCE-style experimental design objective. The difference is the gradient being estimated:
-
-$$
-\text{RL policy gradient:}
-\qquad
-\text{make high-sPCE sampled trajectories more likely.}
-$$
-
-$$
-\text{DAD score/pathwise gradient:}
-\qquad
-\text{make high-sPCE histories more likely, and change the design to improve the likelihood-ratio reward.}
-$$
-
-This is why it is important to be precise about the phrase “EIG gradient.” At finite $L$, both methods are generally optimizing a contrastive lower-bound surrogate, not the exact expected information gain itself. And the RL formulation, although equivalent at the level of expected return, uses a policy-gradient estimator that treats the reward as an RL return. It is therefore primarily reweighting trajectories according to their sPCE return.
-
-DAD’s REINFORCE-style estimator is different: it uses the score-function term for non-reparameterizable outcomes, but still exploits differentiability of the reward with respect to the policy-produced designs.
-
+ 
+which reweights sampled design trajectories by their sPCE return and nothing more. It cannot ask how an infinitesimal change in a design would alter the likelihood-ratio reward, because there is no differentiable path from $\phi$ into a sampled design to carry that question.
+ 
+This is the mirror image of the DAD section. There, the extra term was the deterministic policy gradient of the sPCE reward, the DDPG-shaped object we recovered above. Blau et al. simply operate in the regime where that term does not exist. Same gradient, same objective; the stochastic, non-reparameterized policy switches the direct term off, and the deterministic one switches it back on.
+ 
+ 
 ---
-
+ 
 ## Takeaway
-
-The apparent link between reinforcement learning and Bayesian experimental design is real, but there are two distinct uses of “REINFORCE-style” gradients.
-
-In a pure RL formulation, the reward is treated as an external return. The gradient asks which sampled actions led to high reward and should be made more likely.
-
-In DAD-style Bayesian experimental design, the reward is often a differentiable likelihood-ratio objective. The gradient contains the usual score-function term, but also a direct term asking how the likelihood-ratio reward would change if the design itself were perturbed.
-
-That is the conceptual difference:
-
+ 
+There are not two distinct "REINFORCE-style" gradients here, one for RL and one for DAD. There is a single general gradient of the contrastive objective, and everything reduces to which of its terms survive.
+ 
+That gradient always contains the score-function term, which reweights whole trajectories toward higher sPCE reward. It contains a second, pathwise term only when $\phi$ has a differentiable path into the design. A stochastic, non-reparameterized policy severs that path, so the pathwise term is zero and we are left with exactly the standard REINFORCE estimator. A deterministic policy, like DAD's design network, keeps the path intact, so the pathwise term stays and additionally asks how the likelihood-ratio reward would change if the design itself were perturbed.
+ 
+So the whole distinction collapses onto the policy class:
+ 
 $$
 \boxed{
-\text{RL applied to BED: upweight good sampled design trajectories.}
+\text{Stochastic, non-reparameterized policy: upweight good sampled design trajectories only.}
 }
 $$
-
+ 
 $$
 \boxed{
-\text{DAD-style BED gradient: upweight good histories and differentiate the information objective through the design.}
+\text{Deterministic (or reparameterized) policy: also differentiate the information objective through the design.}
 }
 $$
-
-This also explains why the DAD estimator looks more complex than the usual REINFORCE estimator. The usual RL expression is the special case where the reward does not directly depend on the policy parameters. In Bayesian experimental design, that assumption often fails in exactly the interesting way.
+ 
+This also explains why the DAD estimator looks more complex than the usual REINFORCE estimator. It is not that BED objectives are special *per se*; it is that DAD uses a deterministic design network, which keeps the direct term alive. The pure-REINFORCE expression is the special case where the policy is stochastic and non-reparameterized, so the direct term vanishes. The reward's dependence on $\phi$ only matters when there is a differentiable path from $\phi$ into the design to carry it, and that path is exactly what a deterministic or reparameterized policy provides.
+ 
 
 ---
 
