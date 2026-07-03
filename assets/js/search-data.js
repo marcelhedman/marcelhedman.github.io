@@ -23,7 +23,18 @@ ninja.data = [{
           handler: () => {
             window.location.href = "/publications/";
           },
-        },{id: "post-useful-resources-for-ml-phd-students",
+        },{id: "post-reinforce-bayesian-experimental-design-and-what-gradient-we-are-really-taking",
+        
+          title: "REINFORCE, Bayesian Experimental Design, and What Gradient We Are Really Taking",
+        
+        description: "Exploring the difference between reinforcement learning applied to Bayesian experimental design and REINFORCE-style gradients used inside standard Bayesian experimental design objectives",
+        section: "Posts",
+        handler: () => {
+          
+            window.location.href = "/blog/2026/reinforce_estimators/";
+          
+        },
+      },{id: "post-useful-resources-for-ml-phd-students",
         
           title: "Useful resources for ML PhD students",
         
