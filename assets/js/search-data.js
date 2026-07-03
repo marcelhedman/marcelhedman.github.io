@@ -27,7 +27,7 @@ ninja.data = [{
         
           title: "REINFORCE, Bayesian Experimental Design, and What Gradient We Are Really Taking",
         
-        description: "Exploring the difference between reinforcement learning applied to Bayesian experimental design and REINFORCE-style gradients used inside standard Bayesian experimental design objectives",
+        description: "Exploring reinforcement learning applied to Bayesian experimental design and REINFORCE-style gradients pre-existing within Bayesian experimental design objectives",
         section: "Posts",
         handler: () => {
           
