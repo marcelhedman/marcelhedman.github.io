@@ -8,8 +8,6 @@ categories: Theory
 featured: true
 ---
 
-# REINFORCE, Experimental Design, and What Gradient We Are Really Taking
-
 Bayesian experimental design and reinforcement learning both address sequential decision-making under uncertainty, and the connection between them is natural. In sequential Bayesian experimental design, we choose a design, observe an outcome, update our beliefs, and choose the next design, a loop that looks very much like the kind of sequential decision problem reinforcement learning is built for.
 
 Several papers make this connection explicit. Blau et al. (2022) formulate sequential Bayesian experimental design as a hidden-parameter MDP and use deep reinforcement learning to learn design policies, motivated partly by the fact that RL can handle settings where the design space is discrete, the probabilistic model is a black box, or the likelihood is non-differentiable (implicit). DAD (foster et al. (2021)), and later variants such as iDAD (Ivanova et al. (2021)) and Step-DAD (Hedman et al. (2025)), also train amortized design policies, but instead do so by directly differentiating information-theoretic objectives such as contrastive lower bounds on expected information gain.
@@ -19,6 +17,8 @@ So it is tempting to say: “these are all just policy-gradient methods for expe
 But that hides an important distinction. The RL formulation and the DAD-style score-function estimator target polcies that perform well under the sequential PCE lower bound, but ultimately are taking distinct gradients that answer different conceptual questions.
 
 The difference comes down to whether the reward is treated as an external scalar, or as a differentiable function of the policy parameters.
+
+---
 
 ## The General Score-Function Identity
 
@@ -141,6 +141,7 @@ $$
 
 is differentiable. The score-function term works with this log-probability rather than with $y_t$ itself, which is how it shifts probability mass toward better trajectories without differentiating through the outcome.
 
+---
 
 ## Why Standard RL Looks Simpler
 
@@ -213,6 +214,8 @@ $$
 $$
 
 The above is a special case of the general identity under the assumption that the reward does not directly depend on the policy parameters.
+
+---
 
 ## The Bayesian Experimental Design Setting
 
@@ -377,6 +380,8 @@ $$
 
 This is the DAD-style score-function estimator for the sPCE objective. It contains both the RL-like probability-shifting term and a direct likelihood-gradient term.
 
+---
+
 ## RL Applied to BED: The Blau et al. (2022) Perspective
 
 Blau et al. (2022) take a different route. Instead of directly differentiating the sPCE expression through a deterministic design network, they construct a hidden-parameter MDP whose expected return is equal to a sequential experimental design objective based on sPCE. They then solve this MDP with modern deep RL methods.
@@ -444,6 +449,8 @@ This is why it is important to be precise about the phrase “EIG gradient.” A
 
 DAD’s REINFORCE-style estimator is different: it uses the score-function term for non-reparameterizable outcomes, but still exploits differentiability of the reward with respect to the policy-produced designs.
 
+---
+
 ## Takeaway
 
 The apparent link between reinforcement learning and Bayesian experimental design is real, but there are two distinct uses of “REINFORCE-style” gradients.
@@ -467,6 +474,8 @@ $$
 $$
 
 This also explains why the DAD estimator looks more complex than the usual REINFORCE estimator. The usual RL expression is the special case where the reward does not directly depend on the policy parameters. In Bayesian experimental design, that assumption often fails in exactly the interesting way.
+
+---
 
 ## References
 
