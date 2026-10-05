@@ -1,6 +1,6 @@
 ---
 layout: post
-title: REINFORCE, Bayesian Experimental Design, and What Gradient We Are Really Taking
+title: Deterministic and Stochastic Policy Gradients for Bayesian Experimental Design
 date: 2026-07-02 15:09:00
 description: Exploring reinforcement learning applied to Bayesian experimental design and REINFORCE-style gradients pre-existing within Bayesian experimental design objectives
 tags: machine-learning reinforcement-learning bayesian-experimental-design gradients information-gain
@@ -381,6 +381,22 @@ $$
  
 This also explains why the DAD estimator looks more complex than the usual REINFORCE estimator. It is not that BED objectives are special *per se*; it is that DAD uses a deterministic design network, which keeps the direct term alive. The pure-REINFORCE expression is the special case where the policy is stochastic and non-reparameterized, so the direct term vanishes. The reward's dependence on $\phi$ only matters when there is a differentiable path from $\phi$ into the design to carry it, and that path is exactly what a deterministic or reparameterized policy provides.
  
+
+---
+
+## Citation
+
+If you'd like to cite this post, you can use
+
+```bibtex
+@misc{hedman2026policygradients,
+  author       = {Hedman, Marcel},
+  title        = {Deterministic and Stochastic Policy Gradients for Bayesian Experimental Design},
+  year         = {2026},
+  howpublished = {\url{https://marcelhedman.github.io/blog/2026/reinforce_estimators/}},
+  note         = {Blog post}
+}
+```
 
 ---
 
