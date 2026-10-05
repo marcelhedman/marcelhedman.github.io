@@ -12,7 +12,7 @@ A collection of resources I've found useful during my ML PhD. If you're starting
 
 ## Getting Started & General Advice
 
-- **[Just Know Stuff: A Guide to an ML PhD](https://kidger.site/thoughts/just-know-stuff/)** — Singlehandedly saved my PhD. If I had paid 100% more time doing what it said, it would not have been wasted.
+- **[Just Know Stuff: A Guide to an ML PhD](https://kidger.site/thoughts/just-know-stuff/)** — Singlehandedly saved my PhD. If I had spent 100% more time doing what it said, it would not have been wasted.
 
 - **[How to ML Rebuttal](https://docs.google.com/document/d/1cdEypaZXnJ10IckV49iBXEl27gCFnwEhQfLr680Fv18/edit?usp=drivesdk)** — Practical guidance on writing effective ML paper rebuttals.
 
