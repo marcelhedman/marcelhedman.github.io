@@ -1,4 +1,4 @@
 User-agent: *
 Disallow:
 
-Sitemap: https://marcel9100.github.io/sitemap.xml
+Sitemap: https://marcelhedman.github.io/sitemap.xml

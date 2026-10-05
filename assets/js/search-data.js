@@ -23,9 +23,9 @@ ninja.data = [{
           handler: () => {
             window.location.href = "/publications/";
           },
-        },{id: "post-reinforce-bayesian-experimental-design-and-what-gradient-we-are-really-taking",
+        },{id: "post-deterministic-and-stochastic-policy-gradients-for-bayesian-experimental-design",
         
-          title: "REINFORCE, Bayesian Experimental Design, and What Gradient We Are Really Taking",
+          title: "Deterministic and Stochastic Policy Gradients for Bayesian Experimental Design",
         
         description: "Exploring reinforcement learning applied to Bayesian experimental design and REINFORCE-style gradients pre-existing within Bayesian experimental design objectives",
         section: "Posts",
